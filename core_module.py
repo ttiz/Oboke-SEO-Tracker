@@ -1,16 +1,20 @@
+import csv
 import json
 import os
 from googleapiclient.discovery import build
 
-# 設定
-GOOGLE_API_KEY = 'あなたのAPIキー'
-CUSTOM_SEARCH_ENGINE_ID = 'あなたのCSE ID'
+# secret.csvから認証情報読取
+def load_secrets(filename='secret.csv'):
+    with open(filename, 'r', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        row = next(reader)
+        return row['GOOGLE_API_KEY'], row['CUSTOM_SEARCH_ENGINE_ID']
+
 DATA_FILE = 'data.json'
 
-# Google検索順位（上位10件）取得
-def get_search_results(query, num=10):
-    service = build('customsearch', 'v1', developerKey=GOOGLE_API_KEY)
-    res = service.cse().list(q=query, cx=CUSTOM_SEARCH_ENGINE_ID, num=num).execute()
+def get_search_results(query, num=10, api_key='', cse_id=''):
+    service = build('customsearch', 'v1', developerKey=api_key)
+    res = service.cse().list(q=query, cx=cse_id, num=num).execute()
     results = []
     for idx, item in enumerate(res.get('items', []), 1):
         results.append({
@@ -21,22 +25,20 @@ def get_search_results(query, num=10):
         })
     return results
 
-# data.json を読み込む
 def load_data():
     if not os.path.exists(DATA_FILE):
         return {}
     with open(DATA_FILE, 'r', encoding='utf-8') as f:
         return json.load(f)
 
-# data.json にデータを書き込む
 def save_data(data):
     with open(DATA_FILE, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
-# 実行例
 if __name__ == '__main__':
+    api_key, cse_id = load_secrets()
     query = input('検索キーワード: ')
-    results = get_search_results(query)
+    results = get_search_results(query, api_key=api_key, cse_id=cse_id)
 
     data = load_data()
     data[query] = results
